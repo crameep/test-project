@@ -9,6 +9,7 @@ import { Tower, TowerType } from './tower.js';
 import { InputHandler } from './input.js';
 import { EffectsManager } from './effects.js';
 import { UI } from './ui.js';
+import { EnemyManager } from './enemies.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -63,7 +64,7 @@ export class Game {
         this.effects = new EffectsManager(this);
         this.input = new InputHandler(this);
         this.ui = new UI(this);
-        this.enemies = null;
+        this.enemies = new EnemyManager(this);
         this.progression = null;
 
         // Handle visibility change to pause when tab is hidden
