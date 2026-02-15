@@ -2,26 +2,131 @@
  * Main game styles
  */
 
+/* ============================================
+   CSS Reset & Base Styles
+   ============================================ */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
-    background-color: #1a1a2e;
+html, body {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
 }
 
+body {
+    background-color: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #ffffff;
+
+    /* Prevent text selection during gameplay */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior: none;
+}
+
+/* ============================================
+   Game Container - Centers the canvas
+   ============================================ */
 #game-container {
     display: flex;
     justify-content: center;
     align-items: center;
     width: 100vw;
     height: 100vh;
+
+    /* Prevent touch actions that interfere with drag-drop */
+    touch-action: none;
+
+    /* Ensure container fills viewport */
+    position: fixed;
+    top: 0;
+    left: 0;
 }
 
+/* ============================================
+   Game Canvas
+   ============================================ */
 #game-canvas {
     background-color: #16213e;
-    border: 2px solid #0f3460;
+    border: 3px solid #0f3460;
+    border-radius: 4px;
+
+    /* Prevent canvas from being dragged */
+    -webkit-user-drag: none;
+    user-drag: none;
+
+    /* Disable touch callout on iOS */
+    -webkit-touch-callout: none;
+
+    /* Prevent text selection on canvas */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    /* Touch action for game input */
+    touch-action: none;
+
+    /* Crisp pixel rendering for game graphics */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+
+    /* Subtle shadow for depth */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================
+   Responsive Canvas Sizing
+   ============================================ */
+@media (max-width: 480px) {
+    #game-canvas {
+        border-width: 2px;
+        border-radius: 2px;
+    }
+}
+
+@media (max-height: 480px) {
+    #game-canvas {
+        border-width: 2px;
+    }
+}
+
+/* ============================================
+   Focus States for Accessibility
+   ============================================ */
+#game-canvas:focus {
+    outline: 2px solid #e94560;
+    outline-offset: 2px;
+}
+
+/* ============================================
+   Loading State (optional future use)
+   ============================================ */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    color: #e94560;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+.no-scroll {
+    overflow: hidden;
 }
