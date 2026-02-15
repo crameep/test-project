@@ -1,0 +1,24 @@
+{
+  "name": "micro-tower-defense",
+  "version": "1.0.0",
+  "description": "Micro Tower Defense - Merge Madness: A fast-paced web tower defense game",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "serve": "npx serve . -p 8080"
+  },
+  "keywords": [
+    "game",
+    "tower-defense",
+    "html5",
+    "canvas"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
