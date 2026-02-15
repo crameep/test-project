@@ -8,6 +8,7 @@ import { Grid } from './grid.js';
 import { Tower, TowerType } from './tower.js';
 import { InputHandler } from './input.js';
 import { EffectsManager } from './effects.js';
+import { UI } from './ui.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -57,11 +58,11 @@ export class Game {
         this.coins = 0;
         this.runCoins = 0; // Coins earned this run
 
-        // Initialize grid system
+        // Initialize game systems
         this.grid = new Grid(this);
         this.effects = new EffectsManager(this);
         this.input = new InputHandler(this);
-        this.ui = null;
+        this.ui = new UI(this);
         this.enemies = null;
         this.progression = null;
 
@@ -281,41 +282,10 @@ export class Game {
             this.input.render(this.renderer);
         }
 
-        // Draw UI (timer, coins)
+        // Draw UI (timer, coins, tower panel)
         if (this.ui) {
             this.ui.render(this.renderer);
-        } else {
-            // Temporary: draw basic UI
-            this.renderBasicUI();
         }
-    }
-
-    /**
-     * Render basic UI elements (placeholder until ui.js is implemented)
-     */
-    renderBasicUI() {
-        // Draw timer
-        const timerText = Math.ceil(this.timer).toString();
-        this.renderer.drawText(
-            timerText,
-            CANVAS_WIDTH / 2,
-            20,
-            this.timer <= 10 ? COLORS.accent : COLORS.text,
-            'bold 24px sans-serif',
-            'center',
-            'top'
-        );
-
-        // Draw coins
-        this.renderer.drawText(
-            `Coins: ${this.runCoins}`,
-            10,
-            CANVAS_HEIGHT - 20,
-            COLORS.gold,
-            '16px sans-serif',
-            'left',
-            'bottom'
-        );
     }
 
     /**
@@ -402,6 +372,9 @@ export class Game {
         }
         if (this.input) {
             this.input.clearDragState();
+        }
+        if (this.ui) {
+            this.ui.reset();
         }
 
         // Add test towers to verify drag-drop functionality
