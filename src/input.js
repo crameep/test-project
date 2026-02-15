@@ -215,6 +215,12 @@ export class InputHandler {
             this.game.sound.resumeContext();
         }
 
+        // Check if clicking on mute button (works in all states)
+        if (this.game.ui && this.game.ui.isInMuteButton(pos.x, pos.y)) {
+            this.game.ui.handleMuteClick();
+            return;
+        }
+
         // Handle non-playing state clicks
         if (this.game.state !== GameState.PLAYING) {
             this.handleNonPlayingClick(pos);
