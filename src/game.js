@@ -5,6 +5,7 @@
 
 import { Renderer, COLORS } from './renderer.js';
 import { Grid } from './grid.js';
+import { Tower, TowerType } from './tower.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -392,6 +393,41 @@ export class Game {
         if (this.effects) {
             this.effects.reset();
         }
+
+        // Add test towers to verify rendering (temporary - will be replaced by drag-drop)
+        this.spawnTestTowers();
+    }
+
+    /**
+     * Spawn test towers to verify rendering works correctly
+     * This is temporary and will be removed once drag-drop is implemented
+     */
+    spawnTestTowers() {
+        // Place one of each tower type at different tiers for testing
+        // Fire tower (diamond shape, red) - Tier 1
+        const fireTower = new Tower(TowerType.FIRE, 1);
+        this.grid.placeTower(0, 0, fireTower);
+
+        // Ice tower (circle shape, blue) - Tier 1
+        const iceTower = new Tower(TowerType.ICE, 1);
+        this.grid.placeTower(2, 0, iceTower);
+
+        // Earth tower (square shape, green) - Tier 1
+        const earthTower = new Tower(TowerType.EARTH, 1);
+        this.grid.placeTower(4, 0, earthTower);
+
+        // Higher tier examples (row 2)
+        // Fire tower Tier 2
+        const fireTower2 = new Tower(TowerType.FIRE, 2);
+        this.grid.placeTower(0, 2, fireTower2);
+
+        // Ice tower Tier 2
+        const iceTower2 = new Tower(TowerType.ICE, 2);
+        this.grid.placeTower(2, 2, iceTower2);
+
+        // Earth tower Tier 3
+        const earthTower3 = new Tower(TowerType.EARTH, 3);
+        this.grid.placeTower(4, 2, earthTower3);
     }
 
     /**
