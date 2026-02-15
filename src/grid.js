@@ -4,6 +4,7 @@
  */
 
 import { COLORS } from './renderer.js';
+import { Tower, getMergeReward } from './tower.js';
 
 // Grid configuration
 const DEFAULT_COLS = 5;
@@ -233,7 +234,7 @@ export class Grid {
             tower.y = center.y;
         }
 
-        // Check for merges (will be implemented in tower.js subtask)
+        // Check for merges with adjacent same-type/tier towers
         this.checkMerge(col, row);
 
         return true;
@@ -254,25 +255,82 @@ export class Grid {
 
     /**
      * Check for possible merges at a cell
+     * Performs instant merge if adjacent same-type/tier tower is found
+     * Supports recursive chain merges
      * @param {number} col - Column index
      * @param {number} row - Row index
+     * @returns {boolean} True if a merge occurred
      */
     checkMerge(col, row) {
-        // Placeholder - will be fully implemented in subtask-2-4
         const tower = this.getTower(col, row);
-        if (!tower) return;
+        if (!tower) return false;
+
+        // Cannot merge max tier towers
+        if (tower.tier >= 5) return false;
 
         const adjacent = this.getAdjacentCells(col, row);
         for (const cell of adjacent) {
             const neighbor = this.cells[cell.index];
-            if (neighbor &&
-                neighbor.type === tower.type &&
-                neighbor.tier === tower.tier) {
-                // Merge will be triggered here in subtask-2-4
-                // For now, just detect and return
-                return;
+            // Check if neighbor can merge using tower's canMergeWith method
+            if (neighbor && tower.canMergeWith(neighbor)) {
+                // INSTANT MERGE - no delay!
+                this.performMerge(col, row, cell.col, cell.row);
+                return true;
             }
         }
+        return false;
+    }
+
+    /**
+     * Perform a merge between two towers
+     * Creates an upgraded tower at the first position
+     * Triggers burst effects and coin rewards
+     * Recursively checks for chain merges
+     * @param {number} col1 - Column of first tower (will keep the merged tower)
+     * @param {number} row1 - Row of first tower
+     * @param {number} col2 - Column of second tower (will be removed)
+     * @param {number} row2 - Row of second tower
+     */
+    performMerge(col1, row1, col2, row2) {
+        const tower1 = this.getTower(col1, row1);
+        const tower2 = this.getTower(col2, row2);
+
+        if (!tower1 || !tower2) return;
+
+        // Store tower info before removal
+        const towerType = tower1.type;
+        const originalTier = tower1.tier;
+        const newTier = originalTier + 1;
+
+        // Remove both towers from grid
+        this.cells[this.getIndex(col1, row1)] = null;
+        this.cells[this.getIndex(col2, row2)] = null;
+
+        // Create upgraded tower at first position
+        const mergedTower = new Tower(towerType, newTier);
+
+        // Place the merged tower directly (without triggering another merge check yet)
+        this.cells[this.getIndex(col1, row1)] = mergedTower;
+
+        // Update tower's position
+        mergedTower.col = col1;
+        mergedTower.row = row1;
+        const center = this.getCellCenter(col1, row1);
+        mergedTower.x = center.x;
+        mergedTower.y = center.y;
+
+        // Trigger burst effects if effects manager exists
+        if (this.game.effects) {
+            this.game.effects.spawnMergeBurst(col1, row1);
+        }
+
+        // Add coin reward based on tier
+        const reward = getMergeReward(originalTier);
+        this.game.addCoins(reward);
+
+        // Recursively check for chain merges
+        // The merged tower might be able to merge with other adjacent towers
+        this.checkMerge(col1, row1);
     }
 
     /**
