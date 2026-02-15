@@ -7,6 +7,7 @@ import { Renderer, COLORS } from './renderer.js';
 import { Grid } from './grid.js';
 import { Tower, TowerType } from './tower.js';
 import { InputHandler } from './input.js';
+import { EffectsManager } from './effects.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -58,7 +59,7 @@ export class Game {
 
         // Initialize grid system
         this.grid = new Grid(this);
-        this.effects = null;
+        this.effects = new EffectsManager(this);
         this.input = new InputHandler(this);
         this.ui = null;
         this.enemies = null;
