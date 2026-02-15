@@ -252,4 +252,62 @@ export class EffectsManager {
     isActive() {
         return this.shakeDuration > 0 || this.particles.length > 0;
     }
+
+    /**
+     * Spawn a hit effect at the specified position
+     * Creates small particles at the impact point
+     * @param {number} x - X position in pixels
+     * @param {number} y - Y position in pixels
+     * @param {string} color - Color of the hit effect
+     */
+    spawnHitEffect(x, y, color) {
+        const count = 4;
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 30 + Math.random() * 50;
+
+            const particle = new Particle(
+                x + (Math.random() - 0.5) * 10,
+                y + (Math.random() - 0.5) * 10,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                color,
+                0.2 + Math.random() * 0.1,
+                2 + Math.random() * 2
+            );
+
+            this.particles.push(particle);
+        }
+    }
+
+    /**
+     * Spawn an enemy death effect at the specified position
+     * Creates a burst of particles when an enemy dies
+     * @param {number} x - X position in pixels
+     * @param {number} y - Y position in pixels
+     * @param {string} color - Color of the enemy
+     */
+    spawnEnemyDeathEffect(x, y, color) {
+        // Small screen shake
+        this.shake(4, 0.1);
+
+        const count = 8;
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 / count) * i;
+            const speedVariation = 0.7 + Math.random() * 0.6;
+            const speed = 120 * speedVariation;
+
+            const particle = new Particle(
+                x,
+                y,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                color,
+                0.3 + Math.random() * 0.2,
+                3 + Math.random() * 2
+            );
+
+            this.particles.push(particle);
+        }
+    }
 }

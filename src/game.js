@@ -162,9 +162,97 @@ export class Game {
             this.enemies.update(dt);
         }
 
+        // Update towers (combat)
+        this.updateTowers(dt);
+
         // Update UI
         if (this.ui) {
             this.ui.update(dt);
+        }
+    }
+
+    /**
+     * Update all towers (combat logic)
+     * Towers attack enemies in range and deal damage
+     * @param {number} dt - Delta time in seconds
+     */
+    updateTowers(dt) {
+        if (!this.grid || !this.enemies) {
+            return;
+        }
+
+        // Get all active enemies
+        const activeEnemies = this.enemies.getEnemies();
+
+        // Get all towers on the grid
+        const towers = this.grid.getAllTowers();
+
+        // Update each tower
+        for (const { tower } of towers) {
+            if (!tower || tower.isDragging) {
+                continue;
+            }
+
+            // Update tower and check if it fired
+            const projectile = tower.update(dt, activeEnemies);
+
+            if (projectile && projectile.target) {
+                // Apply damage to target
+                this.handleTowerAttack(projectile);
+            }
+        }
+    }
+
+    /**
+     * Handle a tower attack hitting an enemy
+     * @param {Object} projectile - Projectile data from tower
+     */
+    handleTowerAttack(projectile) {
+        const { target, damage, type } = projectile;
+
+        if (!target || target.isDead) {
+            return;
+        }
+
+        // Spawn hit effect at enemy position
+        if (this.effects) {
+            const hitColor = this.getTowerHitColor(type);
+            this.effects.spawnHitEffect(target.x, target.y, hitColor);
+        }
+
+        // Apply damage to enemy
+        const killed = target.takeDamage(damage);
+
+        if (killed) {
+            // Enemy was killed - award coins
+            this.addCoins(target.reward);
+
+            // Spawn death effect
+            if (this.effects) {
+                this.effects.spawnEnemyDeathEffect(
+                    target.x,
+                    target.y,
+                    target.config.color
+                );
+            }
+        }
+    }
+
+    /**
+     * Get the hit effect color for a tower type
+     * @param {string} type - Tower type
+     * @returns {string} Color for hit effect
+     */
+    getTowerHitColor(type) {
+        switch (type) {
+            case TowerType.FIRE:
+                return '#ff6644';
+            case TowerType.ICE:
+                return '#66ccff';
+            case TowerType.EARTH:
+                return '#88cc44';
+            default:
+                return '#ffffff';
         }
     }
 
