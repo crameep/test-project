@@ -1,19 +1,538 @@
 /**
  * Micro Tower Defense - Merge Madness
- * Main game entry point
+ * Core game loop and state management
  */
 
-// Canvas setup
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
+import { Renderer, COLORS } from './renderer.js';
 
-// Set canvas size
+// Canvas configuration
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 480;
 
-canvas.width = CANVAS_WIDTH;
-canvas.height = CANVAS_HEIGHT;
+// Game constants
+const GAME_DURATION = 60; // 60-second runs
 
-// Initial render to show canvas is working
-ctx.fillStyle = '#16213e';
-ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+/**
+ * Game states for state machine
+ * @enum {string}
+ */
+export const GameState = {
+    MENU: 'menu',
+    PLAYING: 'playing',
+    PAUSED: 'paused',
+    GAME_OVER: 'gameOver'
+};
+
+/**
+ * Main Game class - manages game loop and state
+ */
+export class Game {
+    /**
+     * @param {HTMLCanvasElement} canvas - The canvas element to render to
+     */
+    constructor(canvas) {
+        // Canvas setup
+        this.canvas = canvas;
+        this.canvas.width = CANVAS_WIDTH;
+        this.canvas.height = CANVAS_HEIGHT;
+
+        // Initialize renderer
+        this.renderer = new Renderer(canvas);
+
+        // Game state
+        this.state = GameState.MENU;
+        this.previousState = null;
+
+        // Timing
+        this.lastTime = 0;
+        this.deltaTime = 0;
+        this.timer = GAME_DURATION;
+        this.isRunning = false;
+
+        // Game data
+        this.coins = 0;
+        this.runCoins = 0; // Coins earned this run
+
+        // Placeholder for future managers (will be added in later subtasks)
+        this.grid = null;
+        this.effects = null;
+        this.input = null;
+        this.ui = null;
+        this.enemies = null;
+        this.progression = null;
+
+        // Handle visibility change to pause when tab is hidden
+        this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+        // Bind loop method
+        this.loop = this.loop.bind(this);
+    }
+
+    /**
+     * Initialize the game and start the loop
+     */
+    init() {
+        this.isRunning = true;
+        this.lastTime = performance.now();
+        requestAnimationFrame(this.loop);
+    }
+
+    /**
+     * Main game loop - called every frame
+     * @param {number} currentTime - Current timestamp from requestAnimationFrame
+     */
+    loop(currentTime) {
+        // Calculate delta time in seconds
+        this.deltaTime = (currentTime - this.lastTime) / 1000;
+        this.lastTime = currentTime;
+
+        // Cap delta time to prevent large jumps after tab switch
+        if (this.deltaTime > 0.1) {
+            this.deltaTime = 0.016; // ~60fps
+        }
+
+        // Update game logic
+        this.update(this.deltaTime);
+
+        // Render
+        this.render();
+
+        // Continue loop if running
+        if (this.isRunning) {
+            requestAnimationFrame(this.loop);
+        }
+    }
+
+    /**
+     * Update game state based on delta time
+     * @param {number} dt - Delta time in seconds
+     */
+    update(dt) {
+        switch (this.state) {
+            case GameState.MENU:
+                this.updateMenu(dt);
+                break;
+            case GameState.PLAYING:
+                this.updatePlaying(dt);
+                break;
+            case GameState.PAUSED:
+                // No updates while paused
+                break;
+            case GameState.GAME_OVER:
+                this.updateGameOver(dt);
+                break;
+        }
+    }
+
+    /**
+     * Update logic for menu state
+     * @param {number} dt - Delta time in seconds
+     */
+    updateMenu(dt) {
+        // Menu animations or input handling will be added later
+    }
+
+    /**
+     * Update logic for playing state
+     * @param {number} dt - Delta time in seconds
+     */
+    updatePlaying(dt) {
+        // Update timer
+        this.timer -= dt;
+        if (this.timer <= 0) {
+            this.timer = 0;
+            this.endRun();
+            return;
+        }
+
+        // Update effects (screen shake, particles)
+        if (this.effects) {
+            this.effects.update(dt);
+        }
+
+        // Update enemies
+        if (this.enemies) {
+            this.enemies.update(dt);
+        }
+
+        // Update UI
+        if (this.ui) {
+            this.ui.update(dt);
+        }
+    }
+
+    /**
+     * Update logic for game over state
+     * @param {number} dt - Delta time in seconds
+     */
+    updateGameOver(dt) {
+        // Game over animations or input handling will be added later
+    }
+
+    /**
+     * Render the current game state
+     */
+    render() {
+        // Clear canvas
+        this.renderer.clear(COLORS.background);
+
+        // Apply screen shake if effects manager exists
+        if (this.effects) {
+            const shake = this.effects.getShakeOffset();
+            this.renderer.setShakeOffset(shake.x, shake.y);
+            this.renderer.applyShakeTransform();
+        }
+
+        switch (this.state) {
+            case GameState.MENU:
+                this.renderMenu();
+                break;
+            case GameState.PLAYING:
+                this.renderPlaying();
+                break;
+            case GameState.PAUSED:
+                this.renderPlaying();
+                this.renderPauseOverlay();
+                break;
+            case GameState.GAME_OVER:
+                this.renderGameOver();
+                break;
+        }
+
+        // Reset transform after rendering
+        this.renderer.resetTransform();
+    }
+
+    /**
+     * Render menu state
+     */
+    renderMenu() {
+        // Draw title
+        this.renderer.drawText(
+            'MICRO TD',
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 3,
+            COLORS.accent,
+            'bold 36px sans-serif',
+            'center',
+            'middle'
+        );
+
+        // Draw subtitle
+        this.renderer.drawText(
+            'Merge Madness',
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 3 + 40,
+            COLORS.text,
+            '20px sans-serif',
+            'center',
+            'middle'
+        );
+
+        // Draw instruction
+        this.renderer.drawText(
+            'Click to Start',
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT * 0.6,
+            COLORS.textDim,
+            '16px sans-serif',
+            'center',
+            'middle'
+        );
+
+        // Draw total coins if progression exists
+        if (this.progression) {
+            this.renderer.drawText(
+                `Total Coins: ${this.coins}`,
+                CANVAS_WIDTH / 2,
+                CANVAS_HEIGHT - 40,
+                COLORS.gold,
+                '14px sans-serif',
+                'center',
+                'middle'
+            );
+        }
+    }
+
+    /**
+     * Render playing state
+     */
+    renderPlaying() {
+        // Draw grid (placeholder - will be replaced when grid.js is implemented)
+        if (this.grid) {
+            this.grid.render(this.renderer);
+        } else {
+            // Temporary: draw placeholder grid
+            const gridSize = 5;
+            const cellSize = 64;
+            const gridWidth = gridSize * cellSize;
+            const gridHeight = gridSize * cellSize;
+            const offsetX = (CANVAS_WIDTH - gridWidth) / 2;
+            const offsetY = 60;
+            this.renderer.drawGrid(gridSize, gridSize, cellSize, offsetX, offsetY);
+        }
+
+        // Draw enemies
+        if (this.enemies) {
+            this.enemies.render(this.renderer);
+        }
+
+        // Draw effects (particles)
+        if (this.effects) {
+            this.effects.render(this.renderer);
+        }
+
+        // Draw UI (timer, coins)
+        if (this.ui) {
+            this.ui.render(this.renderer);
+        } else {
+            // Temporary: draw basic UI
+            this.renderBasicUI();
+        }
+    }
+
+    /**
+     * Render basic UI elements (placeholder until ui.js is implemented)
+     */
+    renderBasicUI() {
+        // Draw timer
+        const timerText = Math.ceil(this.timer).toString();
+        this.renderer.drawText(
+            timerText,
+            CANVAS_WIDTH / 2,
+            20,
+            this.timer <= 10 ? COLORS.accent : COLORS.text,
+            'bold 24px sans-serif',
+            'center',
+            'top'
+        );
+
+        // Draw coins
+        this.renderer.drawText(
+            `Coins: ${this.runCoins}`,
+            10,
+            CANVAS_HEIGHT - 20,
+            COLORS.gold,
+            '16px sans-serif',
+            'left',
+            'bottom'
+        );
+    }
+
+    /**
+     * Render pause overlay
+     */
+    renderPauseOverlay() {
+        // Semi-transparent overlay
+        this.renderer.save();
+        this.renderer.setAlpha(0.7);
+        this.renderer.drawRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, '#000000');
+        this.renderer.restore();
+
+        // Pause text
+        this.renderer.drawText(
+            'PAUSED',
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 2,
+            COLORS.text,
+            'bold 32px sans-serif',
+            'center',
+            'middle'
+        );
+    }
+
+    /**
+     * Render game over state
+     */
+    renderGameOver() {
+        // Draw background
+        this.renderer.drawRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, COLORS.background);
+
+        // Draw game over text
+        this.renderer.drawText(
+            'GAME OVER',
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 3,
+            COLORS.accent,
+            'bold 32px sans-serif',
+            'center',
+            'middle'
+        );
+
+        // Draw score
+        this.renderer.drawText(
+            `Coins Earned: ${this.runCoins}`,
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 2,
+            COLORS.gold,
+            'bold 24px sans-serif',
+            'center',
+            'middle'
+        );
+
+        // Draw instruction
+        this.renderer.drawText(
+            'Click to Play Again',
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT * 0.7,
+            COLORS.textDim,
+            '16px sans-serif',
+            'center',
+            'middle'
+        );
+    }
+
+    /**
+     * Start a new game run
+     */
+    startRun() {
+        this.previousState = this.state;
+        this.state = GameState.PLAYING;
+        this.timer = GAME_DURATION;
+        this.runCoins = 0;
+
+        // Reset game systems
+        if (this.grid) {
+            this.grid.reset();
+        }
+        if (this.enemies) {
+            this.enemies.reset();
+        }
+        if (this.effects) {
+            this.effects.reset();
+        }
+    }
+
+    /**
+     * End the current game run
+     */
+    endRun() {
+        this.previousState = this.state;
+        this.state = GameState.GAME_OVER;
+
+        // Add run coins to total
+        this.coins += this.runCoins;
+
+        // Save progression
+        if (this.progression) {
+            this.progression.addCoins(this.runCoins);
+        }
+    }
+
+    /**
+     * Add coins to the current run
+     * @param {number} amount - Number of coins to add
+     */
+    addCoins(amount) {
+        this.runCoins += amount;
+    }
+
+    /**
+     * Change game state
+     * @param {GameState} newState - New state to transition to
+     */
+    setState(newState) {
+        this.previousState = this.state;
+        this.state = newState;
+    }
+
+    /**
+     * Pause the game
+     */
+    pause() {
+        if (this.state === GameState.PLAYING) {
+            this.previousState = this.state;
+            this.state = GameState.PAUSED;
+        }
+    }
+
+    /**
+     * Resume the game from pause
+     */
+    resume() {
+        if (this.state === GameState.PAUSED) {
+            this.state = this.previousState || GameState.PLAYING;
+        }
+    }
+
+    /**
+     * Handle visibility change (pause when tab is hidden)
+     */
+    handleVisibilityChange() {
+        if (document.hidden && this.state === GameState.PLAYING) {
+            this.pause();
+        }
+    }
+
+    /**
+     * Handle click/tap events (temporary - will be replaced by input.js)
+     * @param {MouseEvent|Touch} event - Click or touch event
+     */
+    handleClick(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        switch (this.state) {
+            case GameState.MENU:
+                this.startRun();
+                break;
+            case GameState.PAUSED:
+                this.resume();
+                break;
+            case GameState.GAME_OVER:
+                this.setState(GameState.MENU);
+                break;
+        }
+    }
+
+    /**
+     * Stop the game loop
+     */
+    stop() {
+        this.isRunning = false;
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+
+    /**
+     * Get the current game state
+     * @returns {GameState}
+     */
+    getState() {
+        return this.state;
+    }
+
+    /**
+     * Check if game is in playing state
+     * @returns {boolean}
+     */
+    isPlaying() {
+        return this.state === GameState.PLAYING;
+    }
+}
+
+// Initialize game when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('game-canvas');
+
+    if (!canvas) {
+        return;
+    }
+
+    // Create and initialize game
+    const game = new Game(canvas);
+    game.init();
+
+    // Temporary click handler (will be replaced by input.js)
+    canvas.addEventListener('click', (e) => game.handleClick(e));
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (e.touches.length > 0) {
+            game.handleClick(e.touches[0]);
+        }
+    });
+
+    // Make game accessible globally for debugging
+    window.game = game;
+});
