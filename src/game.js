@@ -11,6 +11,7 @@ import { EffectsManager } from './effects.js';
 import { UI } from './ui.js';
 import { EnemyManager } from './enemies.js';
 import { Progression } from './progression.js';
+import { SoundManager } from './sound.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -67,6 +68,10 @@ export class Game {
         this.input = new InputHandler(this);
         this.ui = new UI(this);
         this.enemies = new EnemyManager(this);
+
+        // Initialize sound system
+        /** @type {SoundManager} */
+        this.sound = new SoundManager(this);
 
         // Initialize progression system with localStorage persistence
         this.progression = new Progression();
@@ -566,6 +571,12 @@ export class Game {
             this.ui.reset();
         }
 
+        // Reset and resume sound system (user interaction triggers audio context)
+        if (this.sound) {
+            this.sound.reset();
+            this.sound.resumeContext();
+        }
+
         // Spawn starting towers based on progression upgrades
         this.spawnStartingTowers();
     }
@@ -718,6 +729,11 @@ export class Game {
         // Clean up enemies
         if (this.enemies) {
             this.enemies.destroy();
+        }
+
+        // Clean up sound system
+        if (this.sound) {
+            this.sound.destroy();
         }
 
         // Clean up grid
