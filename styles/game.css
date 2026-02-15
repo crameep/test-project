@@ -1,0 +1,27 @@
+/* Micro Tower Defense - Merge Madness
+ * Main game styles
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #1a1a2e;
+    overflow: hidden;
+}
+
+#game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+}
+
+#game-canvas {
+    background-color: #16213e;
+    border: 2px solid #0f3460;
+}
