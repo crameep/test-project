@@ -3,6 +3,8 @@
  * Tests tower creation, properties, merge detection, and tier upgrades
  */
 
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+
 // Mock the renderer module
 jest.unstable_mockModule('../src/renderer.js', () => ({
   COLORS: {
@@ -526,6 +528,9 @@ describe('Merge Logic Integration', () => {
       effects: {
         spawnMergeBurst: jest.fn()
       },
+      sound: {
+        playMerge: jest.fn()
+      },
       addCoins: jest.fn()
     };
 
@@ -555,10 +560,10 @@ describe('Merge Logic Integration', () => {
       grid.placeTower(0, 0, tower1);
       grid.placeTower(1, 0, tower2);
 
-      // Check one position has tier 2, other is empty
-      const mergedTower = grid.getTower(0, 0);
+      // Merged tower goes to position of newly placed tower (1,0), original position is empty
+      const mergedTower = grid.getTower(1, 0);
       expect(mergedTower.tier).toBe(2);
-      expect(grid.getTower(1, 0)).toBeNull();
+      expect(grid.getTower(0, 0)).toBeNull();
     });
 
     it('should not merge different types', () => {
@@ -610,15 +615,9 @@ describe('Merge Logic Integration', () => {
 
   describe('chain merges', () => {
     it('should perform chain merge when result can merge again', () => {
-      // Set up: place three tier 1 towers
-      // Tower at (0,0) and (2,0), then place tower at (1,0)
-      // First merge: (1,0) + (0,0) or (2,0) = tier 2
-      // But we need another tier 2 for chain...
-
-      // Better test: place tier 2 at (0,0), tier 1 at (2,0), tier 1 at (3,0)
-      // Then place tier 1 at (1,0)
-      // (1,0) tier 1 + (0,0) tier 2 = no merge (different tiers)
-      // Need: tier 1 at (0,0), tier 1 at (1,0), tier 2 result, tier 2 at (2,0) -> tier 3
+      // Set up: place tier 2 tower at (2,0), then tier 1 towers at (0,0) and (1,0)
+      // When tier 1 at (1,0) is placed, it merges with (0,0) to create tier 2 at (1,0)
+      // That tier 2 at (1,0) then chain merges with tier 2 at (2,0) to create tier 3 at (1,0)
 
       const tier2Tower = new Tower(TowerType.FIRE, 2);
       grid.cells[grid.getIndex(2, 0)] = tier2Tower;
@@ -631,16 +630,16 @@ describe('Merge Logic Integration', () => {
       // Place first tier 1 at (0,0)
       grid.placeTower(0, 0, tower1);
 
-      // Place second tier 1 at (1,0) - should merge with (0,0) to create tier 2
-      // That tier 2 should then chain merge with tier 2 at (2,0) to create tier 3
+      // Place second tier 1 at (1,0) - should merge with (0,0) to create tier 2 at (1,0)
+      // That tier 2 should then chain merge with tier 2 at (2,0) to create tier 3 at (1,0)
       grid.placeTower(1, 0, tower2);
 
-      // The chain should result in a tier 3 tower
-      const finalTower = grid.getTower(0, 0);
+      // The chain should result in a tier 3 tower at the newly placed position (1,0)
+      const finalTower = grid.getTower(1, 0);
       expect(finalTower.tier).toBe(3);
 
       // Other positions should be empty
-      expect(grid.getTower(1, 0)).toBeNull();
+      expect(grid.getTower(0, 0)).toBeNull();
       expect(grid.getTower(2, 0)).toBeNull();
     });
 
@@ -691,22 +690,23 @@ describe('Merge Logic Integration', () => {
       grid.placeTower(0, 0, tower1);
       grid.placeTower(1, 0, tower2);
 
-      const mergedTower = grid.getTower(0, 0);
+      // Merged tower goes to the newly placed position (1,0)
+      const mergedTower = grid.getTower(1, 0);
       expect(mergedTower.type).toBe('ice');
     });
 
-    it('should place merged tower at first tower position', () => {
+    it('should place merged tower at newly placed position', () => {
       const tower1 = new Tower(TowerType.EARTH, 1);
       const tower2 = new Tower(TowerType.EARTH, 1);
 
       grid.placeTower(2, 2, tower1);
       grid.placeTower(3, 2, tower2);
 
-      // Merged tower should be at position (2, 2)
-      const mergedTower = grid.getTower(2, 2);
+      // Merged tower should be at position (3, 2) - where the new tower was placed
+      const mergedTower = grid.getTower(3, 2);
       expect(mergedTower).not.toBeNull();
       expect(mergedTower.tier).toBe(2);
-      expect(grid.getTower(3, 2)).toBeNull();
+      expect(grid.getTower(2, 2)).toBeNull();
     });
 
     it('should update merged tower pixel position', () => {
@@ -716,12 +716,13 @@ describe('Merge Logic Integration', () => {
       grid.placeTower(1, 1, tower1);
       grid.placeTower(2, 1, tower2);
 
-      const mergedTower = grid.getTower(1, 1);
-      const expectedCenter = grid.getCellCenter(1, 1);
+      // Merged tower goes to position (2,1) - where the new tower was placed
+      const mergedTower = grid.getTower(2, 1);
+      const expectedCenter = grid.getCellCenter(2, 1);
 
       expect(mergedTower.x).toBe(expectedCenter.x);
       expect(mergedTower.y).toBe(expectedCenter.y);
-      expect(mergedTower.col).toBe(1);
+      expect(mergedTower.col).toBe(2);
       expect(mergedTower.row).toBe(1);
     });
   });
