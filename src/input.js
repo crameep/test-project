@@ -210,6 +210,11 @@ export class InputHandler {
      * @param {Object} pos - {x, y} position
      */
     handleDragStart(pos) {
+        // Resume audio context on first user interaction (browser requirement)
+        if (this.game.sound) {
+            this.game.sound.resumeContext();
+        }
+
         // Handle non-playing state clicks
         if (this.game.state !== GameState.PLAYING) {
             this.handleNonPlayingClick(pos);

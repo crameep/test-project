@@ -575,6 +575,7 @@ export class Game {
         if (this.sound) {
             this.sound.reset();
             this.sound.resumeContext();
+            this.sound.playGameStart();
         }
 
         // Spawn starting towers based on progression upgrades
@@ -625,6 +626,11 @@ export class Game {
     endRun() {
         this.previousState = this.state;
         this.state = GameState.GAME_OVER;
+
+        // Play game over sound
+        if (this.sound) {
+            this.sound.playGameOver();
+        }
 
         // Save run coins to progression (persists to localStorage)
         if (this.progression) {
