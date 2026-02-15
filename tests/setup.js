@@ -3,6 +3,8 @@
  * Configures global mocks and test utilities
  */
 
+import { jest } from '@jest/globals';
+
 // Mock canvas context
 const mockCanvasContext = {
   clearRect: jest.fn(),

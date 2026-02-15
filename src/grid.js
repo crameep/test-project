@@ -324,6 +324,11 @@ export class Grid {
             this.game.effects.spawnMergeBurst(col1, row1);
         }
 
+        // Play merge sound
+        if (this.game.sound) {
+            this.game.sound.playMerge();
+        }
+
         // Add coin reward based on tier
         const reward = getMergeReward(originalTier);
         this.game.addCoins(reward);

@@ -13,6 +13,8 @@ const PANEL_PADDING = 10;         // Padding inside panel
 const TOWER_SLOT_SIZE = 56;       // Size of each tower slot
 const TOWER_SLOT_GAP = 12;        // Gap between tower slots
 const HUD_HEIGHT = 50;            // Height of top HUD area
+const MUTE_BUTTON_SIZE = 32;      // Size of mute toggle button
+const MUTE_BUTTON_PADDING = 12;   // Padding from edge
 
 /**
  * TowerSlot class - represents a clickable tower slot in the panel
@@ -122,6 +124,13 @@ export class UI {
         this.coinPopScale = 1; // Coin pop animation scale
         this.lastCoins = 0; // Track coin changes for animation
 
+        // Mute button bounds
+        this.muteButton = {
+            x: MUTE_BUTTON_PADDING,
+            y: MUTE_BUTTON_PADDING,
+            size: MUTE_BUTTON_SIZE
+        };
+
         // Initialize upgrade menu
         this.upgradeMenu = new UpgradeMenu(game);
     }
@@ -225,7 +234,7 @@ export class UI {
     }
 
     /**
-     * Render the top HUD (timer, coins)
+     * Render the top HUD (timer, coins, mute button)
      * @param {Object} renderer - Renderer instance
      */
     renderHUD(renderer) {
@@ -234,6 +243,9 @@ export class UI {
 
         // Draw coin counter at top right
         this.renderCoins(renderer);
+
+        // Draw mute button at top left
+        this.renderMuteButton(renderer);
     }
 
     /**
@@ -325,6 +337,155 @@ export class UI {
             'center',
             'top'
         );
+    }
+
+    /**
+     * Render the mute button
+     * @param {Object} renderer - Renderer instance
+     */
+    renderMuteButton(renderer) {
+        const { x, y, size } = this.muteButton;
+        const centerX = x + size / 2;
+        const centerY = y + size / 2;
+
+        // Get muted state from sound manager
+        const isMuted = this.game.sound && this.game.sound.isMuted();
+
+        // Draw button background
+        renderer.save();
+        renderer.setAlpha(0.3);
+        renderer.drawCircle(centerX, centerY, size / 2, COLORS.ui.panel);
+        renderer.restore();
+
+        // Draw speaker icon
+        const iconSize = size * 0.5;
+        const speakerX = centerX - iconSize * 0.3;
+        const speakerY = centerY;
+
+        // Speaker body (small rectangle)
+        renderer.drawRect(
+            speakerX - iconSize * 0.2,
+            speakerY - iconSize * 0.15,
+            iconSize * 0.25,
+            iconSize * 0.3,
+            isMuted ? COLORS.textDim : COLORS.text
+        );
+
+        // Speaker cone (triangle effect with lines)
+        const coneColor = isMuted ? COLORS.textDim : COLORS.text;
+        renderer.drawLine(
+            speakerX + iconSize * 0.05,
+            speakerY - iconSize * 0.15,
+            speakerX + iconSize * 0.25,
+            speakerY - iconSize * 0.35,
+            coneColor,
+            2
+        );
+        renderer.drawLine(
+            speakerX + iconSize * 0.05,
+            speakerY + iconSize * 0.15,
+            speakerX + iconSize * 0.25,
+            speakerY + iconSize * 0.35,
+            coneColor,
+            2
+        );
+        renderer.drawLine(
+            speakerX + iconSize * 0.25,
+            speakerY - iconSize * 0.35,
+            speakerX + iconSize * 0.25,
+            speakerY + iconSize * 0.35,
+            coneColor,
+            2
+        );
+
+        if (isMuted) {
+            // Draw X over speaker when muted
+            renderer.drawLine(
+                centerX + iconSize * 0.1,
+                centerY - iconSize * 0.3,
+                centerX + iconSize * 0.45,
+                centerY + iconSize * 0.3,
+                COLORS.accent,
+                2
+            );
+            renderer.drawLine(
+                centerX + iconSize * 0.1,
+                centerY + iconSize * 0.3,
+                centerX + iconSize * 0.45,
+                centerY - iconSize * 0.3,
+                COLORS.accent,
+                2
+            );
+        } else {
+            // Draw sound waves when unmuted
+            renderer.save();
+            renderer.setAlpha(0.7);
+            // Inner wave
+            this.drawSoundWave(renderer, centerX + iconSize * 0.2, centerY, iconSize * 0.15, COLORS.text);
+            renderer.restore();
+
+            renderer.save();
+            renderer.setAlpha(0.5);
+            // Outer wave
+            this.drawSoundWave(renderer, centerX + iconSize * 0.3, centerY, iconSize * 0.25, COLORS.text);
+            renderer.restore();
+        }
+    }
+
+    /**
+     * Draw a sound wave arc
+     * @param {Object} renderer - Renderer instance
+     * @param {number} x - Center X position
+     * @param {number} y - Center Y position
+     * @param {number} radius - Wave radius
+     * @param {string} color - Wave color
+     */
+    drawSoundWave(renderer, x, y, radius, color) {
+        // Draw arc using lines (approximation)
+        const segments = 5;
+        const arcAngle = Math.PI * 0.6; // 60 degrees each side
+        const startAngle = -arcAngle / 2;
+
+        for (let i = 0; i < segments; i++) {
+            const angle1 = startAngle + (arcAngle / segments) * i;
+            const angle2 = startAngle + (arcAngle / segments) * (i + 1);
+
+            const x1 = x + Math.cos(angle1) * radius;
+            const y1 = y + Math.sin(angle1) * radius;
+            const x2 = x + Math.cos(angle2) * radius;
+            const y2 = y + Math.sin(angle2) * radius;
+
+            renderer.drawLine(x1, y1, x2, y2, color, 2);
+        }
+    }
+
+    /**
+     * Check if a point is within the mute button
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @returns {boolean} True if point is in mute button
+     */
+    isInMuteButton(x, y) {
+        const btn = this.muteButton;
+        const centerX = btn.x + btn.size / 2;
+        const centerY = btn.y + btn.size / 2;
+        const radius = btn.size / 2;
+
+        // Use circular hit test
+        const dx = x - centerX;
+        const dy = y - centerY;
+        return (dx * dx + dy * dy) <= (radius * radius);
+    }
+
+    /**
+     * Handle mute button click - toggles sound mute state
+     * @returns {boolean} New muted state, or false if no sound manager
+     */
+    handleMuteClick() {
+        if (this.game.sound) {
+            return this.game.sound.toggleMute();
+        }
+        return false;
     }
 
     /**

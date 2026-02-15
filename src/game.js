@@ -11,6 +11,7 @@ import { EffectsManager } from './effects.js';
 import { UI } from './ui.js';
 import { EnemyManager } from './enemies.js';
 import { Progression } from './progression.js';
+import { SoundManager } from './sound.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -67,6 +68,10 @@ export class Game {
         this.input = new InputHandler(this);
         this.ui = new UI(this);
         this.enemies = new EnemyManager(this);
+
+        // Initialize sound system
+        /** @type {SoundManager} */
+        this.sound = new SoundManager(this);
 
         // Initialize progression system with localStorage persistence
         this.progression = new Progression();
@@ -218,6 +223,11 @@ export class Game {
             const projectile = tower.update(dt, activeEnemies);
 
             if (projectile && projectile.target) {
+                // Play tower attack sound
+                if (this.sound) {
+                    this.sound.playAttack();
+                }
+
                 // Apply damage to target
                 this.handleTowerAttack(projectile);
             }
@@ -241,12 +251,22 @@ export class Game {
             this.effects.spawnHitEffect(target.x, target.y, hitColor);
         }
 
+        // Play hit sound
+        if (this.sound) {
+            this.sound.playHit();
+        }
+
         // Apply damage to enemy
         const killed = target.takeDamage(damage);
 
         if (killed) {
             // Enemy was killed - award coins
             this.addCoins(target.reward);
+
+            // Play death sound
+            if (this.sound) {
+                this.sound.playDeath();
+            }
 
             // Spawn death effect
             if (this.effects) {
@@ -566,6 +586,13 @@ export class Game {
             this.ui.reset();
         }
 
+        // Reset and resume sound system (user interaction triggers audio context)
+        if (this.sound) {
+            this.sound.reset();
+            this.sound.resumeContext();
+            this.sound.playGameStart();
+        }
+
         // Spawn starting towers based on progression upgrades
         this.spawnStartingTowers();
     }
@@ -614,6 +641,11 @@ export class Game {
     endRun() {
         this.previousState = this.state;
         this.state = GameState.GAME_OVER;
+
+        // Play game over sound
+        if (this.sound) {
+            this.sound.playGameOver();
+        }
 
         // Save run coins to progression (persists to localStorage)
         if (this.progression) {
@@ -718,6 +750,11 @@ export class Game {
         // Clean up enemies
         if (this.enemies) {
             this.enemies.destroy();
+        }
+
+        // Clean up sound system
+        if (this.sound) {
+            this.sound.destroy();
         }
 
         // Clean up grid

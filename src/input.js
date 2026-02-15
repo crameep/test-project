@@ -210,6 +210,17 @@ export class InputHandler {
      * @param {Object} pos - {x, y} position
      */
     handleDragStart(pos) {
+        // Resume audio context on first user interaction (browser requirement)
+        if (this.game.sound) {
+            this.game.sound.resumeContext();
+        }
+
+        // Check if clicking on mute button (works in all states)
+        if (this.game.ui && this.game.ui.isInMuteButton(pos.x, pos.y)) {
+            this.game.ui.handleMuteClick();
+            return;
+        }
+
         // Handle non-playing state clicks
         if (this.game.state !== GameState.PLAYING) {
             this.handleNonPlayingClick(pos);
@@ -264,8 +275,16 @@ export class InputHandler {
         const buttonId = this.game.getMenuButtonAt(pos.x, pos.y);
 
         if (buttonId === 'play') {
+            // Play UI click sound
+            if (this.game.sound) {
+                this.game.sound.playUIClick();
+            }
             this.game.startRun();
         } else if (buttonId === 'upgrades') {
+            // Play UI click sound
+            if (this.game.sound) {
+                this.game.sound.playUIClick();
+            }
             this.game.setState(GameState.UPGRADES);
         }
     }
@@ -279,9 +298,17 @@ export class InputHandler {
             const action = this.game.ui.upgradeMenu.handleClick(pos.x, pos.y);
 
             if (action === 'back') {
+                // Play UI click sound
+                if (this.game.sound) {
+                    this.game.sound.playUIClick();
+                }
                 this.game.setState(GameState.MENU);
+            } else if (action === 'purchase') {
+                // Play UI click sound for successful purchase
+                if (this.game.sound) {
+                    this.game.sound.playUIClick();
+                }
             }
-            // 'purchase' action is handled internally by UpgradeMenu
         }
     }
 
@@ -306,6 +333,11 @@ export class InputHandler {
 
         // Remove tower from grid temporarily
         this.game.grid.removeTower(tower.col, tower.row);
+
+        // Play pickup sound
+        if (this.game.sound) {
+            this.game.sound.playPickup();
+        }
 
         // Update highlight
         this.updateHighlight(pos);
@@ -332,6 +364,11 @@ export class InputHandler {
         // Store drag position
         this.dragX = pos.x;
         this.dragY = pos.y;
+
+        // Play pickup sound
+        if (this.game.sound) {
+            this.game.sound.playPickup();
+        }
 
         // Update highlight
         this.updateHighlight(pos);
@@ -398,6 +435,11 @@ export class InputHandler {
             if (this.game.grid.isCellEmpty(cell.col, cell.row) || isOriginalCell) {
                 // Place the tower
                 placed = this.game.grid.placeTower(cell.col, cell.row, this.draggedTower);
+
+                // Play placement sound if successfully placed
+                if (placed && this.game.sound) {
+                    this.game.sound.playPlace();
+                }
             }
         }
 

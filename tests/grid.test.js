@@ -3,6 +3,8 @@
  * Tests cell lookup, adjacent cells, tower placement, and merge logic
  */
 
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+
 // Mock the renderer module
 jest.unstable_mockModule('../src/renderer.js', () => ({
   COLORS: {

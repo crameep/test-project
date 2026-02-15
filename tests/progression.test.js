@@ -3,6 +3,8 @@
  * Tests save/load, coin management, upgrades, and edge cases
  */
 
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+
 // Import the Progression class and UPGRADES
 const { Progression, UPGRADES } = await import('../src/progression.js');
 
