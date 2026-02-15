@@ -223,6 +223,11 @@ export class Game {
             const projectile = tower.update(dt, activeEnemies);
 
             if (projectile && projectile.target) {
+                // Play tower attack sound
+                if (this.sound) {
+                    this.sound.playAttack();
+                }
+
                 // Apply damage to target
                 this.handleTowerAttack(projectile);
             }
@@ -246,12 +251,22 @@ export class Game {
             this.effects.spawnHitEffect(target.x, target.y, hitColor);
         }
 
+        // Play hit sound
+        if (this.sound) {
+            this.sound.playHit();
+        }
+
         // Apply damage to enemy
         const killed = target.takeDamage(damage);
 
         if (killed) {
             // Enemy was killed - award coins
             this.addCoins(target.reward);
+
+            // Play death sound
+            if (this.sound) {
+                this.sound.playDeath();
+            }
 
             // Spawn death effect
             if (this.effects) {
