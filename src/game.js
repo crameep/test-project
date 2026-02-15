@@ -4,6 +4,7 @@
  */
 
 import { Renderer, COLORS } from './renderer.js';
+import { Grid } from './grid.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -53,8 +54,8 @@ export class Game {
         this.coins = 0;
         this.runCoins = 0; // Coins earned this run
 
-        // Placeholder for future managers (will be added in later subtasks)
-        this.grid = null;
+        // Initialize grid system
+        this.grid = new Grid(this);
         this.effects = null;
         this.input = null;
         this.ui = null;
@@ -259,19 +260,8 @@ export class Game {
      * Render playing state
      */
     renderPlaying() {
-        // Draw grid (placeholder - will be replaced when grid.js is implemented)
-        if (this.grid) {
-            this.grid.render(this.renderer);
-        } else {
-            // Temporary: draw placeholder grid
-            const gridSize = 5;
-            const cellSize = 64;
-            const gridWidth = gridSize * cellSize;
-            const gridHeight = gridSize * cellSize;
-            const offsetX = (CANVAS_WIDTH - gridWidth) / 2;
-            const offsetY = 60;
-            this.renderer.drawGrid(gridSize, gridSize, cellSize, offsetX, offsetY);
-        }
+        // Draw the grid
+        this.grid.render(this.renderer);
 
         // Draw enemies
         if (this.enemies) {
