@@ -241,7 +241,10 @@ export class InputHandler {
     handleNonPlayingClick(pos) {
         switch (this.game.state) {
             case GameState.MENU:
-                this.game.startRun();
+                this.handleMenuClick(pos);
+                break;
+            case GameState.UPGRADES:
+                this.handleUpgradesClick(pos);
                 break;
             case GameState.PAUSED:
                 this.game.resume();
@@ -249,6 +252,36 @@ export class InputHandler {
             case GameState.GAME_OVER:
                 this.game.setState(GameState.MENU);
                 break;
+        }
+    }
+
+    /**
+     * Handle clicks on the main menu
+     * @param {Object} pos - {x, y} position
+     */
+    handleMenuClick(pos) {
+        // Check for menu button clicks
+        const buttonId = this.game.getMenuButtonAt(pos.x, pos.y);
+
+        if (buttonId === 'play') {
+            this.game.startRun();
+        } else if (buttonId === 'upgrades') {
+            this.game.setState(GameState.UPGRADES);
+        }
+    }
+
+    /**
+     * Handle clicks on the upgrades menu
+     * @param {Object} pos - {x, y} position
+     */
+    handleUpgradesClick(pos) {
+        if (this.game.ui && this.game.ui.upgradeMenu) {
+            const action = this.game.ui.upgradeMenu.handleClick(pos.x, pos.y);
+
+            if (action === 'back') {
+                this.game.setState(GameState.MENU);
+            }
+            // 'purchase' action is handled internally by UpgradeMenu
         }
     }
 

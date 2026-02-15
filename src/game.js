@@ -25,6 +25,7 @@ const GAME_DURATION = 60; // 60-second runs
  */
 export const GameState = {
     MENU: 'menu',
+    UPGRADES: 'upgrades',
     PLAYING: 'playing',
     PAUSED: 'paused',
     GAME_OVER: 'gameOver'
@@ -125,6 +126,9 @@ export class Game {
             case GameState.MENU:
                 this.updateMenu(dt);
                 break;
+            case GameState.UPGRADES:
+                this.updateUpgrades(dt);
+                break;
             case GameState.PLAYING:
                 this.updatePlaying(dt);
                 break;
@@ -143,6 +147,17 @@ export class Game {
      */
     updateMenu(dt) {
         // Menu animations or input handling will be added later
+    }
+
+    /**
+     * Update logic for upgrades state
+     * @param {number} dt - Delta time in seconds
+     */
+    updateUpgrades(dt) {
+        // Upgrade menu animations handled by UI
+        if (this.ui && this.ui.upgradeMenu) {
+            this.ui.upgradeMenu.update(dt);
+        }
     }
 
     /**
@@ -288,6 +303,9 @@ export class Game {
             case GameState.MENU:
                 this.renderMenu();
                 break;
+            case GameState.UPGRADES:
+                this.renderUpgrades();
+                break;
             case GameState.PLAYING:
                 this.renderPlaying();
                 break;
@@ -330,28 +348,104 @@ export class Game {
             'middle'
         );
 
-        // Draw instruction
-        this.renderer.drawText(
-            'Click to Start',
-            CANVAS_WIDTH / 2,
-            CANVAS_HEIGHT * 0.6,
-            COLORS.textDim,
-            '16px sans-serif',
-            'center',
-            'middle'
-        );
+        // Draw Play button
+        const playButtonY = CANVAS_HEIGHT * 0.55;
+        this.drawMenuButton('PLAY', CANVAS_WIDTH / 2, playButtonY, 'play');
+
+        // Draw Upgrades button
+        const upgradesButtonY = CANVAS_HEIGHT * 0.68;
+        this.drawMenuButton('UPGRADES', CANVAS_WIDTH / 2, upgradesButtonY, 'upgrades');
 
         // Draw total coins if progression exists
         if (this.progression) {
+            // Draw coin icon
+            const coinY = CANVAS_HEIGHT - 35;
+            this.renderer.drawCircle(CANVAS_WIDTH / 2 - 50, coinY, 8, COLORS.gold);
+            this.renderer.save();
+            this.renderer.setAlpha(0.5);
+            this.renderer.drawCircle(CANVAS_WIDTH / 2 - 50, coinY, 4, '#B8860B');
+            this.renderer.restore();
+
             this.renderer.drawText(
-                `Total Coins: ${this.coins}`,
-                CANVAS_WIDTH / 2,
-                CANVAS_HEIGHT - 40,
+                `${this.coins}`,
+                CANVAS_WIDTH / 2 - 35,
+                coinY,
                 COLORS.gold,
-                '14px sans-serif',
-                'center',
+                'bold 16px sans-serif',
+                'left',
                 'middle'
             );
+        }
+    }
+
+    /**
+     * Draw a menu button
+     * @param {string} text - Button text
+     * @param {number} x - Center X position
+     * @param {number} y - Center Y position
+     * @param {string} id - Button identifier
+     */
+    drawMenuButton(text, x, y, id) {
+        const buttonWidth = 150;
+        const buttonHeight = 40;
+        const buttonX = x - buttonWidth / 2;
+        const buttonY = y - buttonHeight / 2;
+
+        // Store button bounds for click detection
+        if (!this.menuButtons) {
+            this.menuButtons = {};
+        }
+        this.menuButtons[id] = {
+            x: buttonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+
+        // Draw button background
+        this.renderer.drawRect(buttonX, buttonY, buttonWidth, buttonHeight, COLORS.ui.button);
+
+        // Draw button border
+        this.renderer.drawRectOutline(buttonX, buttonY, buttonWidth, buttonHeight, COLORS.accent, 2);
+
+        // Draw button text
+        this.renderer.drawText(
+            text,
+            x,
+            y,
+            COLORS.text,
+            'bold 16px sans-serif',
+            'center',
+            'middle'
+        );
+    }
+
+    /**
+     * Get menu button at position
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @returns {string|null} Button ID or null
+     */
+    getMenuButtonAt(x, y) {
+        if (!this.menuButtons) {
+            return null;
+        }
+
+        for (const [id, bounds] of Object.entries(this.menuButtons)) {
+            if (x >= bounds.x && x <= bounds.x + bounds.width &&
+                y >= bounds.y && y <= bounds.y + bounds.height) {
+                return id;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Render upgrades state
+     */
+    renderUpgrades() {
+        if (this.ui && this.ui.upgradeMenu) {
+            this.ui.upgradeMenu.render(this.renderer);
         }
     }
 

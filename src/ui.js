@@ -5,6 +5,7 @@
 
 import { COLORS } from './renderer.js';
 import { Tower, TowerType, TOWER_CONFIG, getAvailableTowerTypes } from './tower.js';
+import { UPGRADES } from './progression.js';
 
 // UI Layout constants
 const PANEL_HEIGHT = 80;          // Height of tower selection panel
@@ -120,6 +121,9 @@ export class UI {
         this.timerFlash = 0; // Timer flash effect when low
         this.coinPopScale = 1; // Coin pop animation scale
         this.lastCoins = 0; // Track coin changes for animation
+
+        // Initialize upgrade menu
+        this.upgradeMenu = new UpgradeMenu(game);
     }
 
     /**
@@ -378,5 +382,325 @@ export class UI {
      */
     getPanelY() {
         return this.panelY;
+    }
+}
+
+// Upgrade menu layout constants
+const UPGRADE_MENU_PADDING = 20;
+const UPGRADE_ITEM_HEIGHT = 80;
+const UPGRADE_ITEM_GAP = 12;
+const BACK_BUTTON_HEIGHT = 40;
+
+/**
+ * UpgradeMenu class - handles the upgrade shop screen
+ */
+export class UpgradeMenu {
+    /**
+     * @param {Object} game - Reference to the main game instance
+     */
+    constructor(game) {
+        this.game = game;
+        this.canvas = game.canvas;
+
+        // Animation state
+        this.purchaseFlash = {};
+        this.selectedUpgrade = null;
+
+        // Button bounds for click detection
+        this.upgradeButtons = [];
+        this.backButton = null;
+    }
+
+    /**
+     * Update upgrade menu state
+     * @param {number} dt - Delta time in seconds
+     */
+    update(dt) {
+        // Decay purchase flash animations
+        for (const key in this.purchaseFlash) {
+            if (this.purchaseFlash[key] > 0) {
+                this.purchaseFlash[key] = Math.max(0, this.purchaseFlash[key] - dt * 3);
+            }
+        }
+    }
+
+    /**
+     * Render the upgrade menu
+     * @param {Object} renderer - Renderer instance
+     */
+    render(renderer) {
+        // Reset button tracking
+        this.upgradeButtons = [];
+
+        // Draw background
+        renderer.drawRect(0, 0, this.canvas.width, this.canvas.height, COLORS.background);
+
+        // Draw title
+        renderer.drawText(
+            'UPGRADES',
+            this.canvas.width / 2,
+            40,
+            COLORS.accent,
+            'bold 28px sans-serif',
+            'center',
+            'middle'
+        );
+
+        // Draw coin balance
+        this.renderCoinBalance(renderer);
+
+        // Draw upgrade items
+        this.renderUpgradeItems(renderer);
+
+        // Draw back button
+        this.renderBackButton(renderer);
+    }
+
+    /**
+     * Render the current coin balance
+     * @param {Object} renderer - Renderer instance
+     */
+    renderCoinBalance(renderer) {
+        const y = 75;
+        const totalCoins = this.game.progression.getTotalCoins();
+
+        // Draw coin icon
+        renderer.drawCircle(this.canvas.width / 2 - 40, y, 10, COLORS.gold);
+        renderer.save();
+        renderer.setAlpha(0.5);
+        renderer.drawCircle(this.canvas.width / 2 - 40, y, 5, '#B8860B');
+        renderer.restore();
+
+        // Draw coin count
+        renderer.drawText(
+            `${totalCoins}`,
+            this.canvas.width / 2 - 25,
+            y,
+            COLORS.gold,
+            'bold 20px sans-serif',
+            'left',
+            'middle'
+        );
+    }
+
+    /**
+     * Render all upgrade items
+     * @param {Object} renderer - Renderer instance
+     */
+    renderUpgradeItems(renderer) {
+        const upgradeInfo = this.game.progression.getUpgradeInfo();
+        const startY = 110;
+
+        upgradeInfo.forEach((upgrade, index) => {
+            const y = startY + index * (UPGRADE_ITEM_HEIGHT + UPGRADE_ITEM_GAP);
+            this.renderUpgradeItem(renderer, upgrade, y, index);
+        });
+    }
+
+    /**
+     * Render a single upgrade item
+     * @param {Object} renderer - Renderer instance
+     * @param {Object} upgrade - Upgrade info object
+     * @param {number} y - Y position
+     * @param {number} index - Item index
+     */
+    renderUpgradeItem(renderer, upgrade, y, index) {
+        const x = UPGRADE_MENU_PADDING;
+        const width = this.canvas.width - UPGRADE_MENU_PADDING * 2;
+        const height = UPGRADE_ITEM_HEIGHT;
+
+        // Store button bounds
+        this.upgradeButtons.push({
+            id: upgrade.id,
+            x: x,
+            y: y,
+            width: width,
+            height: height
+        });
+
+        // Background color based on state
+        let bgColor = COLORS.ui.panel;
+        if (this.purchaseFlash[upgrade.id] > 0) {
+            // Flash green on successful purchase
+            bgColor = '#2d5a3d';
+        } else if (upgrade.isMaxed) {
+            bgColor = '#1a2a1a'; // Darker for maxed
+        }
+
+        // Draw item background
+        renderer.drawRect(x, y, width, height, bgColor);
+
+        // Draw border
+        const borderColor = upgrade.canPurchase ? COLORS.accent : COLORS.gridLine;
+        renderer.drawRectOutline(x, y, width, height, borderColor, 2);
+
+        // Draw upgrade name
+        renderer.drawText(
+            upgrade.name,
+            x + 15,
+            y + 18,
+            COLORS.text,
+            'bold 16px sans-serif',
+            'left',
+            'middle'
+        );
+
+        // Draw level indicator
+        const levelText = upgrade.isMaxed
+            ? 'MAX'
+            : `Level ${upgrade.currentLevel}/${upgrade.maxLevel}`;
+        renderer.drawText(
+            levelText,
+            x + width - 15,
+            y + 18,
+            upgrade.isMaxed ? COLORS.gold : COLORS.textDim,
+            '14px sans-serif',
+            'right',
+            'middle'
+        );
+
+        // Draw description
+        renderer.drawText(
+            upgrade.description,
+            x + 15,
+            y + 42,
+            COLORS.textDim,
+            '12px sans-serif',
+            'left',
+            'middle'
+        );
+
+        // Draw cost/status button area
+        this.renderUpgradeButton(renderer, upgrade, x + width - 90, y + 50, 75, 24);
+    }
+
+    /**
+     * Render the buy button for an upgrade
+     * @param {Object} renderer - Renderer instance
+     * @param {Object} upgrade - Upgrade info object
+     * @param {number} x - Button X position
+     * @param {number} y - Button Y position
+     * @param {number} width - Button width
+     * @param {number} height - Button height
+     */
+    renderUpgradeButton(renderer, upgrade, x, y, width, height) {
+        if (upgrade.isMaxed) {
+            // Maxed out - show checkmark
+            renderer.drawRect(x, y, width, height, '#2d5a3d');
+            renderer.drawText(
+                '✓ OWNED',
+                x + width / 2,
+                y + height / 2,
+                COLORS.gold,
+                'bold 11px sans-serif',
+                'center',
+                'middle'
+            );
+        } else {
+            // Show cost
+            const buttonColor = upgrade.canPurchase ? COLORS.ui.button : '#333333';
+            renderer.drawRect(x, y, width, height, buttonColor);
+
+            // Draw coin icon and cost
+            const costText = `${upgrade.cost}`;
+            renderer.drawCircle(x + 15, y + height / 2, 6, COLORS.gold);
+            renderer.save();
+            renderer.setAlpha(0.5);
+            renderer.drawCircle(x + 15, y + height / 2, 3, '#B8860B');
+            renderer.restore();
+
+            renderer.drawText(
+                costText,
+                x + 25,
+                y + height / 2,
+                upgrade.canPurchase ? COLORS.text : COLORS.textDim,
+                'bold 12px sans-serif',
+                'left',
+                'middle'
+            );
+        }
+    }
+
+    /**
+     * Render the back button
+     * @param {Object} renderer - Renderer instance
+     */
+    renderBackButton(renderer) {
+        const buttonWidth = 120;
+        const buttonHeight = BACK_BUTTON_HEIGHT;
+        const x = (this.canvas.width - buttonWidth) / 2;
+        const y = this.canvas.height - buttonHeight - 20;
+
+        // Store button bounds
+        this.backButton = {
+            x: x,
+            y: y,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+
+        // Draw button
+        renderer.drawRect(x, y, buttonWidth, buttonHeight, COLORS.ui.panel);
+        renderer.drawRectOutline(x, y, buttonWidth, buttonHeight, COLORS.accent, 2);
+
+        renderer.drawText(
+            '< BACK',
+            x + buttonWidth / 2,
+            y + buttonHeight / 2,
+            COLORS.text,
+            'bold 14px sans-serif',
+            'center',
+            'middle'
+        );
+    }
+
+    /**
+     * Handle a click on the upgrade menu
+     * @param {number} x - Click X position
+     * @param {number} y - Click Y position
+     * @returns {string|null} Action taken ('back', 'purchase', or null)
+     */
+    handleClick(x, y) {
+        // Check back button
+        if (this.backButton && this.isInBounds(x, y, this.backButton)) {
+            return 'back';
+        }
+
+        // Check upgrade buttons
+        for (const button of this.upgradeButtons) {
+            if (this.isInBounds(x, y, button)) {
+                // Attempt to purchase upgrade
+                if (this.game.progression.purchaseUpgrade(button.id)) {
+                    // Successful purchase
+                    this.purchaseFlash[button.id] = 1;
+                    // Update game's total coins display
+                    this.game.coins = this.game.progression.getTotalCoins();
+                    return 'purchase';
+                }
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if a point is within bounds
+     * @param {number} x - Point X
+     * @param {number} y - Point Y
+     * @param {Object} bounds - {x, y, width, height}
+     * @returns {boolean} True if point is in bounds
+     */
+    isInBounds(x, y, bounds) {
+        return x >= bounds.x && x <= bounds.x + bounds.width &&
+               y >= bounds.y && y <= bounds.y + bounds.height;
+    }
+
+    /**
+     * Reset menu state
+     */
+    reset() {
+        this.purchaseFlash = {};
+        this.selectedUpgrade = null;
     }
 }
