@@ -10,6 +10,7 @@ import { InputHandler } from './input.js';
 import { EffectsManager } from './effects.js';
 import { UI } from './ui.js';
 import { EnemyManager } from './enemies.js';
+import { Progression } from './progression.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -65,7 +66,12 @@ export class Game {
         this.input = new InputHandler(this);
         this.ui = new UI(this);
         this.enemies = new EnemyManager(this);
-        this.progression = null;
+
+        // Initialize progression system with localStorage persistence
+        this.progression = new Progression();
+
+        // Load total coins from progression
+        this.coins = this.progression.getTotalCoins();
 
         // Handle visibility change to pause when tab is hidden
         this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
@@ -509,21 +515,27 @@ export class Game {
         this.previousState = this.state;
         this.state = GameState.GAME_OVER;
 
-        // Add run coins to total
-        this.coins += this.runCoins;
-
-        // Save progression
+        // Save run coins to progression (persists to localStorage)
         if (this.progression) {
             this.progression.addCoins(this.runCoins);
+            // Update total coins from progression to ensure consistency
+            this.coins = this.progression.getTotalCoins();
+        } else {
+            // Fallback if no progression (shouldn't happen)
+            this.coins += this.runCoins;
         }
     }
 
     /**
      * Add coins to the current run
-     * @param {number} amount - Number of coins to add
+     * Applies coin bonus from progression upgrades
+     * @param {number} amount - Base number of coins to add
      */
     addCoins(amount) {
-        this.runCoins += amount;
+        // Apply coin bonus from progression upgrades
+        const bonus = this.progression ? this.progression.getCoinBonus() : 1;
+        const finalAmount = Math.floor(amount * bonus);
+        this.runCoins += finalAmount;
     }
 
     /**
