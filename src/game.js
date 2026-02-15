@@ -6,6 +6,7 @@
 import { Renderer, COLORS } from './renderer.js';
 import { Grid } from './grid.js';
 import { Tower, TowerType } from './tower.js';
+import { InputHandler } from './input.js';
 
 // Canvas configuration
 const CANVAS_WIDTH = 400;
@@ -58,7 +59,7 @@ export class Game {
         // Initialize grid system
         this.grid = new Grid(this);
         this.effects = null;
-        this.input = null;
+        this.input = new InputHandler(this);
         this.ui = null;
         this.enemies = null;
         this.progression = null;
@@ -274,6 +275,11 @@ export class Game {
             this.effects.render(this.renderer);
         }
 
+        // Draw dragged tower (on top of grid, below UI)
+        if (this.input) {
+            this.input.render(this.renderer);
+        }
+
         // Draw UI (timer, coins)
         if (this.ui) {
             this.ui.render(this.renderer);
@@ -393,8 +399,11 @@ export class Game {
         if (this.effects) {
             this.effects.reset();
         }
+        if (this.input) {
+            this.input.clearDragState();
+        }
 
-        // Add test towers to verify rendering (temporary - will be replaced by drag-drop)
+        // Add test towers to verify drag-drop functionality
         this.spawnTestTowers();
     }
 
@@ -519,6 +528,11 @@ export class Game {
     stop() {
         this.isRunning = false;
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+
+        // Clean up input handler
+        if (this.input) {
+            this.input.destroy();
+        }
     }
 
     /**
@@ -550,14 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const game = new Game(canvas);
     game.init();
 
-    // Temporary click handler (will be replaced by input.js)
-    canvas.addEventListener('click', (e) => game.handleClick(e));
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (e.touches.length > 0) {
-            game.handleClick(e.touches[0]);
-        }
-    });
+    // InputHandler handles all input - no additional click handlers needed
 
     // Make game accessible globally for debugging
     window.game = game;
