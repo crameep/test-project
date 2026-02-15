@@ -162,6 +162,7 @@ class Enemy {
 
 /**
  * EnemyManager class - handles enemy spawning, updating, and wave management
+ * Optimized for performance with in-place array management
  */
 export class EnemyManager {
     /**
@@ -188,6 +189,10 @@ export class EnemyManager {
 
         // Generate the path through the grid
         this.path = this.generatePath();
+
+        // Cached active enemies array to reduce allocations
+        this._activeEnemiesCache = [];
+        this._cacheValid = false;
     }
 
     /**
@@ -233,8 +238,23 @@ export class EnemyManager {
         this.totalKills = 0;
         this.totalEscaped = 0;
 
+        // Invalidate cache
+        this._cacheValid = false;
+        this._activeEnemiesCache.length = 0;
+
         // Regenerate path in case grid changed
         this.path = this.generatePath();
+    }
+
+    /**
+     * Clean up all resources
+     * Call this when the enemy manager is being destroyed
+     */
+    destroy() {
+        this.enemies = [];
+        this._activeEnemiesCache = [];
+        this._cacheValid = false;
+        this.path = [];
     }
 
     /**
@@ -262,9 +282,13 @@ export class EnemyManager {
 
     /**
      * Update all enemies and spawn logic
+     * Uses in-place filtering to reduce garbage collection
      * @param {number} dt - Delta time in seconds
      */
     update(dt) {
+        // Invalidate cache since we're updating
+        this._cacheValid = false;
+
         // Update spawn timer
         this.spawnTimer -= dt;
 
@@ -291,35 +315,49 @@ export class EnemyManager {
             }
         }
 
-        // Update all enemies
-        const activeEnemies = [];
-        for (const enemy of this.enemies) {
-            const isActive = enemy.update(dt);
+        // Update all enemies using in-place filtering (reduces GC pressure)
+        let writeIndex = 0;
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+            enemy.update(dt);
 
             if (enemy.isDead) {
                 this.totalKills++;
-                // Could trigger death effects here
             } else if (enemy.reachedEnd) {
                 this.totalEscaped++;
-                // Could trigger leak effects or damage player
-            } else if (isActive) {
-                activeEnemies.push(enemy);
             } else {
-                // Enemy still active but update returned false
-                activeEnemies.push(enemy);
+                // Enemy still active, keep it
+                this.enemies[writeIndex] = enemy;
+                writeIndex++;
             }
         }
 
-        // Keep only active enemies
-        this.enemies = activeEnemies.filter(e => !e.isDead && !e.reachedEnd);
+        // Trim array to remove dead/escaped enemies
+        this.enemies.length = writeIndex;
     }
 
     /**
      * Get all active enemies (for tower targeting)
+     * Uses caching to avoid creating new arrays every frame
      * @returns {Array} Array of active enemy objects
      */
     getEnemies() {
-        return this.enemies.filter(e => !e.isDead && !e.reachedEnd);
+        // Return cached result if still valid
+        if (this._cacheValid) {
+            return this._activeEnemiesCache;
+        }
+
+        // Rebuild cache - reuse array to avoid allocation
+        this._activeEnemiesCache.length = 0;
+        for (let i = 0; i < this.enemies.length; i++) {
+            const e = this.enemies[i];
+            if (!e.isDead && !e.reachedEnd) {
+                this._activeEnemiesCache.push(e);
+            }
+        }
+
+        this._cacheValid = true;
+        return this._activeEnemiesCache;
     }
 
     /**

@@ -14,8 +14,13 @@ const PARTICLE_LIFE = 0.5;       // Particle lifetime in seconds
 const PARTICLE_GRAVITY = 400;    // Gravity acceleration (pixels/sec²)
 const PARTICLE_SIZE = 4;         // Base particle radius
 
+// Performance constants
+const MAX_PARTICLES = 200;       // Maximum concurrent particles to prevent memory issues
+const PARTICLE_POOL_SIZE = 100;  // Size of particle object pool
+
 /**
  * Particle class - represents a single particle effect
+ * Supports object pooling for performance optimization
  */
 class Particle {
     /**
@@ -27,7 +32,7 @@ class Particle {
      * @param {number} life - Lifetime in seconds
      * @param {number} size - Particle size (radius)
      */
-    constructor(x, y, vx, vy, color, life, size) {
+    constructor(x = 0, y = 0, vx = 0, vy = 0, color = '#ffffff', life = 0.5, size = 4) {
         this.x = x;
         this.y = y;
         this.vx = vx;
@@ -36,6 +41,29 @@ class Particle {
         this.life = life;
         this.maxLife = life;
         this.size = size;
+        this.active = true;
+    }
+
+    /**
+     * Reset particle with new values (for object pooling)
+     * @param {number} x - Starting X position
+     * @param {number} y - Starting Y position
+     * @param {number} vx - X velocity
+     * @param {number} vy - Y velocity
+     * @param {string} color - Particle color
+     * @param {number} life - Lifetime in seconds
+     * @param {number} size - Particle size (radius)
+     */
+    reset(x, y, vx, vy, color, life, size) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = size;
+        this.active = true;
     }
 
     /**
@@ -44,6 +72,8 @@ class Particle {
      * @returns {boolean} True if particle is still alive
      */
     update(dt) {
+        if (!this.active) return false;
+
         // Apply velocity
         this.x += this.vx * dt;
         this.y += this.vy * dt;
@@ -54,7 +84,12 @@ class Particle {
         // Reduce lifetime
         this.life -= dt;
 
-        return this.life > 0;
+        if (this.life <= 0) {
+            this.active = false;
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -68,6 +103,7 @@ class Particle {
 
 /**
  * EffectsManager class - manages screen shake and particle effects
+ * Uses object pooling for performance optimization
  */
 export class EffectsManager {
     /**
@@ -76,21 +112,82 @@ export class EffectsManager {
     constructor(game) {
         this.game = game;
 
-        // Particle system
+        // Particle system with object pooling
         this.particles = [];
+        this.particlePool = [];
+        this.activeParticleCount = 0;
+
+        // Pre-allocate particle pool
+        for (let i = 0; i < PARTICLE_POOL_SIZE; i++) {
+            this.particlePool.push(new Particle());
+        }
 
         // Screen shake state
         this.shakeAmount = 0;
         this.shakeDuration = 0;
+
+        // Cached shake offset to avoid object creation each frame
+        this._shakeOffset = { x: 0, y: 0 };
     }
 
     /**
      * Reset all effects to initial state
      */
     reset() {
+        // Return all active particles to pool
+        for (const particle of this.particles) {
+            particle.active = false;
+            this.particlePool.push(particle);
+        }
         this.particles = [];
+        this.activeParticleCount = 0;
         this.shakeAmount = 0;
         this.shakeDuration = 0;
+    }
+
+    /**
+     * Get a particle from the pool or create a new one
+     * @returns {Particle} A particle ready for use
+     */
+    getParticleFromPool() {
+        if (this.particlePool.length > 0) {
+            return this.particlePool.pop();
+        }
+        // Pool exhausted, create new particle
+        return new Particle();
+    }
+
+    /**
+     * Return a particle to the pool
+     * @param {Particle} particle - The particle to return
+     */
+    returnToPool(particle) {
+        particle.active = false;
+        // Only keep pool at reasonable size
+        if (this.particlePool.length < PARTICLE_POOL_SIZE * 2) {
+            this.particlePool.push(particle);
+        }
+    }
+
+    /**
+     * Add a particle with pooling support
+     * @param {number} x - Starting X position
+     * @param {number} y - Starting Y position
+     * @param {number} vx - X velocity
+     * @param {number} vy - Y velocity
+     * @param {string} color - Particle color
+     * @param {number} life - Lifetime in seconds
+     * @param {number} size - Particle size (radius)
+     */
+    addParticle(x, y, vx, vy, color, life, size) {
+        // Enforce max particle limit
+        if (this.particles.length >= MAX_PARTICLES) {
+            return;
+        }
+
+        const particle = this.getParticleFromPool();
+        particle.reset(x, y, vx, vy, color, life, size);
+        this.particles.push(particle);
     }
 
     /**
@@ -123,18 +220,8 @@ export class EffectsManager {
             const vx = Math.cos(angle) * speed;
             const vy = Math.sin(angle) * speed;
 
-            // Create gold coin particle
-            const particle = new Particle(
-                x,
-                y,
-                vx,
-                vy,
-                COLORS.gold,
-                PARTICLE_LIFE,
-                PARTICLE_SIZE
-            );
-
-            this.particles.push(particle);
+            // Create gold coin particle using pooling
+            this.addParticle(x, y, vx, vy, COLORS.gold, PARTICLE_LIFE, PARTICLE_SIZE);
         }
     }
 
@@ -157,7 +244,8 @@ export class EffectsManager {
             const angle = Math.random() * Math.PI * 2;
             const speed = 50 + Math.random() * 100;
 
-            const particle = new Particle(
+            // Create particle using pooling
+            this.addParticle(
                 x + (Math.random() - 0.5) * 20,
                 y + (Math.random() - 0.5) * 20,
                 Math.cos(angle) * speed,
@@ -166,8 +254,6 @@ export class EffectsManager {
                 0.3 + Math.random() * 0.2,
                 2 + Math.random() * 2
             );
-
-            this.particles.push(particle);
         }
     }
 
@@ -184,6 +270,7 @@ export class EffectsManager {
 
     /**
      * Update all effects
+     * Uses in-place filtering to reduce garbage collection
      * @param {number} dt - Delta time in seconds
      */
     update(dt) {
@@ -196,28 +283,44 @@ export class EffectsManager {
             }
         }
 
-        // Update particles (filter out dead ones)
-        this.particles = this.particles.filter(particle => particle.update(dt));
+        // Update particles using in-place filtering (reduces GC pressure)
+        let writeIndex = 0;
+        for (let i = 0; i < this.particles.length; i++) {
+            const particle = this.particles[i];
+            if (particle.update(dt)) {
+                // Particle still alive, keep it
+                this.particles[writeIndex] = particle;
+                writeIndex++;
+            } else {
+                // Particle dead, return to pool
+                this.returnToPool(particle);
+            }
+        }
+        // Trim array to remove dead particles
+        this.particles.length = writeIndex;
+        this.activeParticleCount = writeIndex;
     }
 
     /**
      * Get the current screen shake offset
      * Returns random offset within shake amplitude
+     * Uses cached object to avoid allocation
      * @returns {Object} {x, y} offset in pixels
      */
     getShakeOffset() {
         if (this.shakeDuration <= 0 || this.shakeAmount <= 0) {
-            return { x: 0, y: 0 };
+            this._shakeOffset.x = 0;
+            this._shakeOffset.y = 0;
+            return this._shakeOffset;
         }
 
         // Calculate decay factor (shake reduces over time)
         const decay = this.shakeDuration / SHAKE_DURATION;
         const currentAmount = this.shakeAmount * decay;
 
-        return {
-            x: (Math.random() - 0.5) * currentAmount * 2,
-            y: (Math.random() - 0.5) * currentAmount * 2
-        };
+        this._shakeOffset.x = (Math.random() - 0.5) * currentAmount * 2;
+        this._shakeOffset.y = (Math.random() - 0.5) * currentAmount * 2;
+        return this._shakeOffset;
     }
 
     /**
@@ -266,7 +369,8 @@ export class EffectsManager {
             const angle = Math.random() * Math.PI * 2;
             const speed = 30 + Math.random() * 50;
 
-            const particle = new Particle(
+            // Create particle using pooling
+            this.addParticle(
                 x + (Math.random() - 0.5) * 10,
                 y + (Math.random() - 0.5) * 10,
                 Math.cos(angle) * speed,
@@ -275,8 +379,6 @@ export class EffectsManager {
                 0.2 + Math.random() * 0.1,
                 2 + Math.random() * 2
             );
-
-            this.particles.push(particle);
         }
     }
 
@@ -297,7 +399,8 @@ export class EffectsManager {
             const speedVariation = 0.7 + Math.random() * 0.6;
             const speed = 120 * speedVariation;
 
-            const particle = new Particle(
+            // Create particle using pooling
+            this.addParticle(
                 x,
                 y,
                 Math.cos(angle) * speed,
@@ -306,8 +409,20 @@ export class EffectsManager {
                 0.3 + Math.random() * 0.2,
                 3 + Math.random() * 2
             );
-
-            this.particles.push(particle);
         }
+    }
+
+    /**
+     * Clean up all resources and return particles to pool
+     * Call this when the effects manager is being destroyed
+     */
+    destroy() {
+        // Return all particles to pool
+        for (const particle of this.particles) {
+            particle.active = false;
+        }
+        this.particles = [];
+        this.particlePool = [];
+        this.activeParticleCount = 0;
     }
 }

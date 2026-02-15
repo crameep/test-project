@@ -698,7 +698,8 @@ export class Game {
     }
 
     /**
-     * Stop the game loop
+     * Stop the game loop and clean up all resources
+     * Prevents memory leaks when game is destroyed
      */
     stop() {
         this.isRunning = false;
@@ -708,6 +709,24 @@ export class Game {
         if (this.input) {
             this.input.destroy();
         }
+
+        // Clean up effects manager
+        if (this.effects) {
+            this.effects.destroy();
+        }
+
+        // Clean up enemies
+        if (this.enemies) {
+            this.enemies.destroy();
+        }
+
+        // Clean up grid
+        if (this.grid) {
+            this.grid.reset();
+        }
+
+        // Clear references to help GC
+        this.menuButtons = null;
     }
 
     /**
