@@ -269,8 +269,16 @@ export class InputHandler {
         const buttonId = this.game.getMenuButtonAt(pos.x, pos.y);
 
         if (buttonId === 'play') {
+            // Play UI click sound
+            if (this.game.sound) {
+                this.game.sound.playUIClick();
+            }
             this.game.startRun();
         } else if (buttonId === 'upgrades') {
+            // Play UI click sound
+            if (this.game.sound) {
+                this.game.sound.playUIClick();
+            }
             this.game.setState(GameState.UPGRADES);
         }
     }
@@ -284,9 +292,17 @@ export class InputHandler {
             const action = this.game.ui.upgradeMenu.handleClick(pos.x, pos.y);
 
             if (action === 'back') {
+                // Play UI click sound
+                if (this.game.sound) {
+                    this.game.sound.playUIClick();
+                }
                 this.game.setState(GameState.MENU);
+            } else if (action === 'purchase') {
+                // Play UI click sound for successful purchase
+                if (this.game.sound) {
+                    this.game.sound.playUIClick();
+                }
             }
-            // 'purchase' action is handled internally by UpgradeMenu
         }
     }
 
