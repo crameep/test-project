@@ -312,6 +312,11 @@ export class InputHandler {
         // Remove tower from grid temporarily
         this.game.grid.removeTower(tower.col, tower.row);
 
+        // Play pickup sound
+        if (this.game.sound) {
+            this.game.sound.playPickup();
+        }
+
         // Update highlight
         this.updateHighlight(pos);
     }
@@ -337,6 +342,11 @@ export class InputHandler {
         // Store drag position
         this.dragX = pos.x;
         this.dragY = pos.y;
+
+        // Play pickup sound
+        if (this.game.sound) {
+            this.game.sound.playPickup();
+        }
 
         // Update highlight
         this.updateHighlight(pos);
@@ -403,6 +413,11 @@ export class InputHandler {
             if (this.game.grid.isCellEmpty(cell.col, cell.row) || isOriginalCell) {
                 // Place the tower
                 placed = this.game.grid.placeTower(cell.col, cell.row, this.draggedTower);
+
+                // Play placement sound if successfully placed
+                if (placed && this.game.sound) {
+                    this.game.sound.playPlace();
+                }
             }
         }
 

@@ -404,6 +404,73 @@ export class SoundManager {
     }
 
     /**
+     * Play tower pickup sound - quick rising tone
+     * Creates a short "pop" sound when picking up a tower
+     */
+    playPickup() {
+        if (!this.isReady() || !this.canPlay('pickup')) return;
+        this.markPlayed('pickup');
+
+        const now = this.context.currentTime;
+        const duration = 0.1;
+
+        // Quick rising tone for pickup
+        const osc = this.createOscillator('sine', 400);
+        const gain = this.createGain(0.15);
+
+        if (!osc || !gain) return;
+
+        // Rising pitch for "pop" pickup effect
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + duration);
+
+        // Quick envelope
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + duration);
+
+        this.scheduleCleanup(osc, duration);
+    }
+
+    /**
+     * Play tower placement sound - settling thud
+     * Creates a satisfying "thunk" when placing a tower
+     */
+    playPlace() {
+        if (!this.isReady() || !this.canPlay('place')) return;
+        this.markPlayed('place');
+
+        const now = this.context.currentTime;
+        const duration = 0.12;
+
+        // Descending tone for placement
+        const osc = this.createOscillator('triangle', 600);
+        const gain = this.createGain(0.2);
+
+        if (!osc || !gain) return;
+
+        // Descending pitch for settling effect
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + duration);
+
+        // Quick attack, moderate decay
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + duration);
+
+        this.scheduleCleanup(osc, duration);
+    }
+
+    /**
      * Play UI click sound - subtle button click
      * Creates a short, crisp click for UI interactions
      */
