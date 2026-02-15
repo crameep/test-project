@@ -566,40 +566,46 @@ export class Game {
             this.ui.reset();
         }
 
-        // Add test towers to verify drag-drop functionality
-        this.spawnTestTowers();
+        // Spawn starting towers based on progression upgrades
+        this.spawnStartingTowers();
     }
 
     /**
-     * Spawn test towers to verify rendering works correctly
-     * This is temporary and will be removed once drag-drop is implemented
+     * Spawn starting towers based on progression upgrades
+     * Places bonus towers on the grid at the starting tier
      */
-    spawnTestTowers() {
-        // Place one of each tower type at different tiers for testing
-        // Fire tower (diamond shape, red) - Tier 1
-        const fireTower = new Tower(TowerType.FIRE, 1);
-        this.grid.placeTower(0, 0, fireTower);
+    spawnStartingTowers() {
+        // Get starting tier and tower count from progression
+        const startingTier = this.progression
+            ? this.progression.getStartingTier()
+            : 1;
+        const startingTowerCount = this.progression
+            ? this.progression.getStartingTowerCount()
+            : 0;
 
-        // Ice tower (circle shape, blue) - Tier 1
-        const iceTower = new Tower(TowerType.ICE, 1);
-        this.grid.placeTower(2, 0, iceTower);
+        // No starting towers to spawn if upgrade not purchased
+        if (startingTowerCount <= 0) {
+            return;
+        }
 
-        // Earth tower (square shape, green) - Tier 1
-        const earthTower = new Tower(TowerType.EARTH, 1);
-        this.grid.placeTower(4, 0, earthTower);
+        // Available tower types to randomly select from
+        const towerTypes = [TowerType.FIRE, TowerType.ICE, TowerType.EARTH];
 
-        // Higher tier examples (row 2)
-        // Fire tower Tier 2
-        const fireTower2 = new Tower(TowerType.FIRE, 2);
-        this.grid.placeTower(0, 2, fireTower2);
+        // Predefined starting positions (spread across the grid)
+        const startingPositions = [
+            { col: 0, row: 0 },
+            { col: 4, row: 0 }
+        ];
 
-        // Ice tower Tier 2
-        const iceTower2 = new Tower(TowerType.ICE, 2);
-        this.grid.placeTower(2, 2, iceTower2);
+        // Spawn the appropriate number of starting towers
+        for (let i = 0; i < startingTowerCount && i < startingPositions.length; i++) {
+            const pos = startingPositions[i];
+            const type = towerTypes[i % towerTypes.length];
 
-        // Earth tower Tier 3
-        const earthTower3 = new Tower(TowerType.EARTH, 3);
-        this.grid.placeTower(4, 2, earthTower3);
+            // Create tower at the starting tier
+            const tower = new Tower(type, startingTier);
+            this.grid.placeTower(pos.col, pos.row, tower);
+        }
     }
 
     /**
